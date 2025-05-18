@@ -9,7 +9,7 @@
 * **多种交互方式**：键盘手动控制、随机动作测试、脚本自动训练。
 * **算法即插即用**：表格版 SARSA、Expected SARSA（支持 on-policy / off-policy + 经验回放）。
 
-> 📚 代码风格与注释皆面向 RL 初学者，适合作为课程 / 读书会配套 Demo。
+> 📚 代码风格与注释皆面向 RL 初学者
 
 ---
 
@@ -28,7 +28,7 @@ RL_Learning_Practice/
 │   ├── RL_Solver_Class.py       # Solver 基类 + SARSA / Expected SARSA
 │   ├── RL_Sarsa.py              # SARSA 训练脚本
 │   ├── RL_ExpectedSarsa.py      # Expected SARSA 训练脚本
-│   ├── *.ipynb                  # 教程 / 试验笔记本
+│   ├── *.ipynb                  # 教程笔记本
 └── README.md                    # 本文件
 ```
 
@@ -64,7 +64,7 @@ pip install "gym~=0.26" pygame numpy matplotlib tqdm
 ### 1️⃣ 键盘体验环境
 
 ```bash
-python EnvTest_ManualControl.py
+python EnvTest_ManualControl.py(手打搬运)
 ```
 
 * 使用 **↑ ↓ ← →** 移动代理；
@@ -74,7 +74,7 @@ python EnvTest_ManualControl.py
 ### 2️⃣ 随机动作示例
 
 ```bash
-python EnvTest_RandomAction.py
+python EnvTest_RandomAction.py(手打搬运)
 ```
 
 脚本会随机采样动作，并将随机生成的价值函数 & 策略渲染到窗口。
