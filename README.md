@@ -4,7 +4,7 @@
 
 一个基于 **OpenAI Gym** 的可视化 Cliff-Walking 环境 + 经典表格型强化学习算法（SARSA / Expected SARSA）的教学 & 实验仓库。
 
-* **环境完全自研**：支持任意网格尺寸、可自由切换 `human / rgb_array` 渲染模式。
+* **环境**：支持任意网格尺寸、可自由切换 `human / rgb_array` 渲染模式。
 * **实时可视化**：价值函数用颜色深浅渲染，贪心策略用绿虚线箭头渲染。
 * **多种交互方式**：键盘手动控制、随机动作测试、脚本自动训练。
 * **算法即插即用**：表格版 SARSA、Expected SARSA（支持 on-policy / off-policy + 经验回放）。
