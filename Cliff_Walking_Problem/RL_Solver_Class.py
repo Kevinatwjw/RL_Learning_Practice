@@ -238,3 +238,38 @@ class Q_learning(Solver):
                 td_error = td_target - self.Q_table[s, a]
                 self.Q_table[s,a] += self.alpha * td_error 
         self.policy_is_updated = False
+
+class Double_Q_Learning(Solver):
+    def __init__(self, env:gym.Env, alpha=0.1, gamma=0.9,epsilon=0.1,seed=None):
+        super().__init__(env, alpha, gamma, epsilon, seed)
+        self.Q_table_copy = self.Q_table.copy()
+    def update_V_table(self):
+        if not self.policy_is_updated:
+            self.update_policy()
+        
+        for i in range(self.n_state):
+            Q_table_mean = (self.Q_table + self.Q_table_copy) * 0.5
+            self.V_table[i] = Q_table_mean[i][self.greedy_policy[i][0]]
+    
+    def update_policy(self):
+        Q_table_sum = self.Q_table + self.Q_table_copy
+        max_action_value = np.max(Q_table_sum, axis=1)
+        self.greedy_policy = np.array([np.where(Q_table_sum[i] == max_action_value[i])[0] for i in range(self.n_state)], dtype = object)
+        self.policy_is_updated = True
+        
+    def update_Q_table(self, state, action, reward, next_state, batch_size=0):
+        transitions = [(state, action, reward, next_state)]
+        if batch_size > 0:
+            self.replay_buffer.push_transition(transition=(state, action, reward, next_state))
+            transitions = self.replay_buffer.sample(batch_size)
+        for s, a, r, s_ in transitions:
+            if self.rng.random() < 0.5:
+                td_target = r + self.gamma * self.Q_table_copy[s_,np.argmax(self.Q_table[s_])]
+                td_error = td_target - self.Q_table[s, a]
+                self.Q_table[s, a] += self.alpha * td_error
+            else:
+                td_target = r + self.gamma * self.Q_table[s_,np.argmax(self.Q_table_copy[s_])]
+                td_error = td_target - self.Q_table_copy[s, a]
+                self.Q_table_copy[s, a] += self.alpha * td_error
+        self.policy_is_updated = False
+        

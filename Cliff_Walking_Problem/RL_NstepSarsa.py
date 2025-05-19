@@ -52,7 +52,6 @@ for i in range(num_period):
                 episode_return += reward
                 # 若掉下悬崖或者到达终点，结束当前回合
                 if terminated or truncated:
-                    episode_return += reward
                     break
                 # 更新状态和动作
                 state = next_state
