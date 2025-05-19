@@ -159,6 +159,7 @@ class Nstep_SARSA(Solver):
             self.state_list = []
             self.action_list = []
             self.reward_list = []
+        self.policy_is_updated = False
             
 class NstepSarsa_Off_policy(Solver):
     def __init__(self, env, alpha=0.1, gamma=0.9, epsilon=0.1, seed=None, nstep=5):
@@ -218,3 +219,22 @@ class NstepSarsa_Off_policy(Solver):
             self.state_list = []
             self.action_list = []
             self.reward_list = []
+        self.policy_is_updated = False
+        
+class Q_learning(Solver):
+    def __init__(self, env:gym.Env, alpha=0.1, gamma=0.9,epsilon=0.1,seed=None):
+        super().__init__(env, alpha, gamma, epsilon, seed)
+        
+    def update_Q_table(self, state, action, reward, next_state, batch_size=0):
+        if batch_size == 0: # on-policy
+            td_target = reward + self.gamma * self.Q_table[next_state].max()
+            td_error = td_target - self.Q_table[state, action]
+            self.Q_table[state, action] += self.alpha * td_error
+        else: # off-policy
+            self.replay_buffer.push_transition(transition=(state, action, reward, next_state))
+            transitions = self.replay_buffer.sample(batch_size)
+            for s, a, r, s_ in transitions:
+                td_target = r + self.gamma * self.Q_table[s_].max()
+                td_error = td_target - self.Q_table[s, a]
+                self.Q_table[s,a] += self.alpha * td_error 
+        self.policy_is_updated = False
