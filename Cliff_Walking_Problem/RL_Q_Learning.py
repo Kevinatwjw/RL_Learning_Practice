@@ -3,68 +3,68 @@ from RL_Solver_Class import Q_learning
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-# ÓÃÀ´ÉèÖÃÒ»¸ö episode µÄ×î?²½ÊıÏŞÖÆ£¨step Êı£©¡£³¬¹ıÏŞÖÆ¾Í×Ô¶¯ÖÕÖ¹ episode£¬·µ»Ø truncated = True¡£
+# ç”¨æ¥è®¾ç½®ä¸€ä¸ª episode çš„æœ€?æ­¥æ•°é™åˆ¶ï¼ˆstep æ•°ï¼‰ã€‚è¶…è¿‡é™åˆ¶å°±è‡ªåŠ¨ç»ˆæ­¢ episodeï¼Œè¿”å› truncated = Trueã€‚
 from gym.wrappers import TimeLimit
 
-# envÊµÀı»¯
+# envå®ä¾‹åŒ–
 env = CliffWalkingEnv(render_mode='human', map_size=(4, 12), pix_square_size=30)
-env.action_space.seed(50)  # ÉèÖÃËæ»úÖÖ×Ó
-state, info = env.reset(seed=50)  # ÖØÖÃ»·¾³£¬·µ»Ø³õÊ¼×´Ì¬ºÍĞÅÏ¢
-wrapper_env = TimeLimit(env, max_episode_steps=200)  # ÉèÖÃ×î´ó²½ÊıÏŞÖÆ
-wrapper_env = HashPosition(wrapper_env)  # Ê¹ÓÃ¹şÏ£Î»ÖÃ°ü×°Æ÷½«¶şÎ¬×´Ì¬×ª»¯ÎªÒ»Î¬×´Ì¬
+env.action_space.seed(50)  # è®¾ç½®éšæœºç§å­
+state, info = env.reset(seed=50)  # é‡ç½®ç¯å¢ƒï¼Œè¿”å›åˆå§‹çŠ¶æ€å’Œä¿¡æ¯
+wrapper_env = TimeLimit(env, max_episode_steps=200)  # è®¾ç½®æœ€å¤§æ­¥æ•°é™åˆ¶
+wrapper_env = HashPosition(wrapper_env)  # ä½¿ç”¨å“ˆå¸Œä½ç½®åŒ…è£…å™¨å°†äºŒç»´çŠ¶æ€è½¬åŒ–ä¸ºä¸€ç»´çŠ¶æ€
 
 
-# Q-LearningÊµÀı»¯
-epsilon = 0.1           # ³õÊ¼Ì½Ë÷ÂÊ
-alpha = 0.1             # ³õÊ¼Ñ§Ï°ÂÊ
-agent = Q_learning(wrapper_env, alpha=alpha, gamma=0.9, epsilon=epsilon, seed=50)  # ´´½¨Q-LearningÖÇÄÜÌå
+# Q-Learningå®ä¾‹åŒ–
+epsilon = 0.1           # åˆå§‹æ¢ç´¢ç‡
+alpha = 0.1             # åˆå§‹å­¦ä¹ ç‡
+agent = Q_learning(wrapper_env, alpha=alpha, gamma=0.9, epsilon=epsilon, seed=50)  # åˆ›å»ºQ-Learningæ™ºèƒ½ä½“
 
-num_episodes = 1000  # ÉèÖÃÑµÁ·µÄ×Ü»ØºÏÊı
-num_period = 100  # ÉèÖÃÂÖÊı
-#  Q-Learning Ëã·¨±¾ÉíÄÚ²¿ÓĞÕÛ¿ÛÒò×Ó ¦Ã,¦Ã µÄÓ°ÏìÌåÏÖÔÚ Q ±íµÄ¸üĞÂÖĞ£»
-return_list = []  # ÓÃÓÚ´æ´¢Ã¿¸öÖÜÆÚµÄÆ½¾ù»Ø±¨,»Ø±¨G_t(G_t = r_t +r_{t+1} + ... +r_T)
+num_episodes = 1000  # è®¾ç½®è®­ç»ƒçš„æ€»å›åˆæ•°
+num_period = 100  # è®¾ç½®è½®æ•°
+#  Q-Learning ç®—æ³•æœ¬èº«å†…éƒ¨æœ‰æŠ˜æ‰£å› å­ Î³,Î³ çš„å½±å“ä½“ç°åœ¨ Q è¡¨çš„æ›´æ–°ä¸­ï¼›
+return_list = []  # ç”¨äºå­˜å‚¨æ¯ä¸ªå‘¨æœŸçš„å¹³å‡å›æŠ¥,å›æŠ¥G_t(G_t = r_t +r_{t+1} + ... +r_T)
 
- # ·ÖÂÖÍê³ÉÑµÁ·£¬Ã¿ÂÖ½áÊøºóÍ³¼Æ¸ÃÂÖÆ½¾ù»Ø±¨ 
+ # åˆ†è½®å®Œæˆè®­ç»ƒï¼Œæ¯è½®ç»“æŸåç»Ÿè®¡è¯¥è½®å¹³å‡å›æŠ¥ 
 for i in range(num_period):
-    # # tqdmµÄ½ø¶ÈÌõ¹¦ÄÜ
+    # # tqdmçš„è¿›åº¦æ¡åŠŸèƒ½
     with tqdm(total = num_episodes / num_period, desc='Iteration %d' % i) as pbar:
         for episode in range(int(num_episodes / num_period)):
-            # ÖØÖÃ»·¾³
+            # é‡ç½®ç¯å¢ƒ
             episode_return = 0
-            state, _ = wrapper_env.reset() # _±íÊ¾²»¹ØĞÄinfoµÄÖµ
-            action  = agent.take_action(state)  # Ñ¡Ôñ¶¯×÷
+            state, _ = wrapper_env.reset() # _è¡¨ç¤ºä¸å…³å¿ƒinfoçš„å€¼
+            action  = agent.take_action(state)  # é€‰æ‹©åŠ¨ä½œ
             wrapper_env.render(
-                # ¡ú (ncol, nrow)	×ªÎª¶şÎ¬¾ØÕó£¨ÏÈ°´ÁĞ£©,-1±íÊ¾×Ô¶¯¼ÆËã
+                # â†’ (ncol, nrow)	è½¬ä¸ºäºŒç»´çŸ©é˜µï¼ˆå…ˆæŒ‰åˆ—ï¼‰,-1è¡¨ç¤ºè‡ªåŠ¨è®¡ç®—
                 state_values = agent.V_table.reshape(-1,wrapper_env.nrow).T, 
-                policy = agent.greedy_policy  # äÖÈ¾²ßÂÔ
-                )  # äÖÈ¾»·¾³
+                policy = agent.greedy_policy  # æ¸²æŸ“ç­–ç•¥
+                )  # æ¸²æŸ“ç¯å¢ƒ
             while True:
-                next_state, reward, terminated, truncated, info = wrapper_env.step(action)  # Ö´ĞĞ¶¯×÷
-                # µôÏÂĞüÑÂ»òÕßµ½´ïÖÕµã£¬Õı³£×ß
-                next_action = 0 if terminated or truncated else agent.take_action(next_state)  # Ñ¡ÔñÏÂÒ»¸ö¶¯×÷
-                # ¸üĞÂQ_table
+                next_state, reward, terminated, truncated, info = wrapper_env.step(action)  # æ‰§è¡ŒåŠ¨ä½œ
+                # æ‰ä¸‹æ‚¬å´–æˆ–è€…åˆ°è¾¾ç»ˆç‚¹ï¼Œæ­£å¸¸èµ°
+                next_action = 0 if terminated or truncated else agent.take_action(next_state)  # é€‰æ‹©ä¸‹ä¸€ä¸ªåŠ¨ä½œ
+                # æ›´æ–°Q_table
                 agent.update_Q_table(state, action, reward, next_state, 0)
-                # ¸üĞÂ²ßÂÔ£¬Ì°À·²ßÂÔ
+                # æ›´æ–°ç­–ç•¥ï¼Œè´ªå©ªç­–ç•¥
                 agent.update_policy()
-                # ¸üĞÂ×´Ì¬¼ÛÖµ
+                # æ›´æ–°çŠ¶æ€ä»·å€¼
                 agent.update_V_table()
-                # ¸üĞÂ»Ø±¨£¨×¢Òâ·ÇÕÛ¿Û£©
+                # æ›´æ–°å›æŠ¥ï¼ˆæ³¨æ„éæŠ˜æ‰£ï¼‰
                 episode_return += reward
-                # ÈôµôÏÂĞüÑÂ»òÕßµ½´ïÖÕµã£¬½áÊøµ±Ç°»ØºÏ
+                # è‹¥æ‰ä¸‹æ‚¬å´–æˆ–è€…åˆ°è¾¾ç»ˆç‚¹ï¼Œç»“æŸå½“å‰å›åˆ
                 if terminated or truncated:
                     break
-                # ¸üĞÂ×´Ì¬ºÍ¶¯×÷
+                # æ›´æ–°çŠ¶æ€å’ŒåŠ¨ä½œ
                 state = next_state
                 action = next_action
-            # ½µµÍäÖÈ¾ÆµÂÊ£¬Ìá¸ßÔËËãËÙ¶È
+            # é™ä½æ¸²æŸ“é¢‘ç‡ï¼Œæé«˜è¿ç®—é€Ÿåº¦
             if episode % 5 == 0:
                 wrapper_env.render(
-                    # ¡ú (ncol, nrow)	×ªÎª¶şÎ¬¾ØÕó£¨ÏÈ°´ÁĞ£©,-1±íÊ¾×Ô¶¯¼ÆËã
+                    # â†’ (ncol, nrow)	è½¬ä¸ºäºŒç»´çŸ©é˜µï¼ˆå…ˆæŒ‰åˆ—ï¼‰,-1è¡¨ç¤ºè‡ªåŠ¨è®¡ç®—
                     state_values = agent.V_table.reshape(-1,wrapper_env.nrow).T, 
-                    policy = agent.greedy_policy  # äÖÈ¾²ßÂÔ
+                    policy = agent.greedy_policy  # æ¸²æŸ“ç­–ç•¥
                     )
-            return_list.append(episode_return)  # ¼ÇÂ¼»Ø±¨
-            if (episode + 1) % 5 == 0:  # Ã¿10ÌõĞòÁĞ´òÓ¡Ò»ÏÂÕâ10ÌõĞòÁĞµÄÆ½¾ù»Ø±¨
+            return_list.append(episode_return)  # è®°å½•å›æŠ¥
+            if (episode + 1) % 5 == 0:  # æ¯10æ¡åºåˆ—æ‰“å°ä¸€ä¸‹è¿™10æ¡åºåˆ—çš„å¹³å‡å›æŠ¥
                 pbar.set_postfix({
                     'episode':
                     '%d' % (num_episodes / 10 * i + episode + 1),
@@ -76,7 +76,7 @@ for i in range(num_period):
     agent.alpha = max(0.01, agent.alpha * 0.99)
 wrapper_env.close()
 
-# »æÖÆreturn±ä»¯Í¼
+# ç»˜åˆ¶returnå˜åŒ–å›¾
 episodes_list = list(range(len(return_list)))
 plt.plot(episodes_list, return_list)
 plt.xlabel('Episodes')
