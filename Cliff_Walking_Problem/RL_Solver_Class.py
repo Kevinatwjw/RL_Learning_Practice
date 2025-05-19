@@ -246,9 +246,8 @@ class Double_Q_Learning(Solver):
     def update_V_table(self):
         if not self.policy_is_updated:
             self.update_policy()
-        
+        Q_table_mean = (self.Q_table + self.Q_table_copy) * 0.5
         for i in range(self.n_state):
-            Q_table_mean = (self.Q_table + self.Q_table_copy) * 0.5
             self.V_table[i] = Q_table_mean[i][self.greedy_policy[i][0]]
     
     def update_policy(self):
