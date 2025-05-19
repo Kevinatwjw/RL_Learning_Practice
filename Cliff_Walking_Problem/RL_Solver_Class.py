@@ -148,14 +148,72 @@ class Nstep_SARSA(Solver):
             # 计算G_{t:t+m}，采用倒序的方法
             G = self.Q_table[next_state,next_action] 
             for i in reversed(range(len(self.state_list))):
-                G = self.gamma * G + self.reward_list[i]       
+                G = self.gamma * G + self.reward_list[i]  
+                     
                 td_target = G # TD-target
-                # 提取最初的状态动作对，并剔除最老的一组数据
-                s_t = self.state_list.pop(0)
-                a_t = self.action_list.pop(0)
-                self.reward_list.pop(0)
+                s_t = self.state_list[i]
+                a_t = self.action_list[i]
                 td_error = td_target - self.Q_table[s_t, a_t]
                 self.Q_table[s_t, a_t] = self.Q_table[s_t, a_t] + self.alpha * td_error
+            # 清空列表，开始新的一轮episode
+            self.state_list = []
+            self.action_list = []
+            self.reward_list = []
+            
+class NstepSarsa_Off_policy(Solver):
+    def __init__(self, env, alpha=0.1, gamma=0.9, epsilon=0.1, seed=None, nstep=5):
+        super().__init__(env, alpha, gamma, epsilon, seed)
+        self.nstep = nstep
+        self.state_list = []
+        self.action_list = []
+        self.reward_list = []
+        # 保存每一步的重要性采样
+        self.rho_list = []
+    
+    def update_Q_table(self, state, action, reward, next_state, next_action, done):
+        self.state_list.append(state)
+        self.action_list.append(action)
+        self.reward_list.append(reward)
+        
+        # 判定该动作是否为ε-greedy的策略
+        if action in self.greedy_policy[state]:
+            p_target = 1 / self.greedy_policy[state].shape[0] # 目标策略
+            p_behavior = (1 - self.epsilon) / self.greedy_policy[state].shape[0] + self.epsilon / self.n_action # 行为策略
+            self.rho_list.append(p_target / p_behavior)
+        else:
+            self.rho_list.append(0)
+        # 套用 NstepSarsa
+        # 判断是否存储了nstep组数据，N-step SARSA 设计的本质就是基于“完整的n步回报”来更新价值函数。
+        if len(self.state_list) == self.nstep:
+            # 计算G_{t:t+n}，采用倒序的方法
+            G = self.Q_table[next_state,next_action] 
+            rho = 1
+            for i in reversed(range(self.nstep)):
+                G = self.gamma * G + self.reward_list[i]       
+                rho *= self.rho_list[i]
+                
+            td_target = G # TD-target
+            # 提取最初的状态动作对，并剔除最老的一组数据
+            s_t = self.state_list.pop(0)
+            a_t = self.action_list.pop(0)
+            self.reward_list.pop(0)
+            td_error = td_target - self.Q_table[s_t, a_t]
+            self.Q_table[s_t, a_t] = self.Q_table[s_t, a_t] + self.alpha * rho * td_error
+        # 如果当智能体进入悬崖或者到达终点，此时大概率不满足长度为nstep,需要特殊处理
+        if done:
+            # 终止状态特殊处理
+            G = self.Q_table[next_state,next_action] 
+            rho = 1
+            for i in reversed(range(len(self.state_list))):
+                G = self.gamma * G + self.reward_list[i]    
+                rho *= self.rho_list[i]
+                   
+                td_target = G # TD-target
+                # 提取最初的状态动作对，并剔除最老的一组数据
+                s_t = self.state_list[i]
+                a_t = self.action_list[i]
+                td_error = td_target - self.Q_table[s_t, a_t]
+                self.Q_table[s_t, a_t] = self.Q_table[s_t, a_t] + self.alpha * rho * td_error
             # 清空列表，开始新的一轮episode
             self.state_list = []
             self.action_list = []
