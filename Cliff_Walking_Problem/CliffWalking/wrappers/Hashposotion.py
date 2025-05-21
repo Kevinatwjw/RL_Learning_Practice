@@ -1,5 +1,4 @@
 import gym
-import gym
 
 # 观测包装，把环境的原生二维观测转为一维的
 class HashPosition(gym.ObservationWrapper):
