@@ -12,13 +12,13 @@ sys.path.append(base_path)
 
 env = RollingBall(render_mode='human', width=5, height=5, show_epi=True)    
 env = FlattenActionSpaceWrapper(DiscreteActionWrapper(env, 5))
-env = TimeLimit(env, 100)
+env = TimeLimit(env, 1000)
 check_env(env.unwrapped)    # 检查环境是否符合 gym 规范
 env.action_space.seed(10)
 observation, _ = env.reset(seed=10)
 
 # 测试环境
-for i in range(100):
+for i in range(1000):
     while True:
         action = env.action_space.sample()
         #action = 19

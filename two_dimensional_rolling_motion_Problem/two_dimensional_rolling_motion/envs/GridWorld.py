@@ -19,7 +19,7 @@ class RollingBall(gym.Env):
         self.show_epi = show_epi  # 是否显示轨迹线
 
         # 定义动作空间：二维连续动作（作用力方向）
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float64)
+        self.action_space = spaces.Box(low=-0.1, high=0.1, shape=(2,), dtype=np.float64)
 
         # 定义观测空间：[x位置, y位置, x速度, y速度]
         self.observation_space = spaces.Box(
@@ -30,8 +30,10 @@ class RollingBall(gym.Env):
 
         # 小球初始速度和物理参数
         self.velocity = np.zeros(2, dtype=np.float64)
-        self.mass = 0.005
+        self.mass = 0.05  # 调整质量以更合理
         self.time_step = 0.01  # 时间步长
+        self.friction_coeff = 0.0046  # 摩擦系数
+        self.restitution_coeff = 0.8  # 恢复系数
 
         # 奖励设计
         self.rewards = {
@@ -64,11 +66,12 @@ class RollingBall(gym.Env):
         return np.hstack((self.position, self.velocity))
 
     def _get_info(self):
-        return {}  # 暂无额外信息
+        # 暂无额外信息
+        return {}
 
     def step(self, action):
-        # 计算加速度 = 力 / 质量
-        acceleration = action / self.mass
+        # 计算加速度，包含摩擦力
+        acceleration = action / self.mass - (self.friction_coeff / self.mass) * self.velocity
 
         # 更新速度
         self.velocity += acceleration * self.time_step
@@ -110,21 +113,21 @@ class RollingBall(gym.Env):
         # x方向边界碰撞
         if self.position[0] <= 0:
             self.position[0] = 0
-            self.velocity[0] *= -1
+            self.velocity[0] *= -self.restitution_coeff  # 使用恢复系数
             reward += self.rewards['bounce']
         elif self.position[0] >= self.width:
             self.position[0] = self.width
-            self.velocity[0] *= -1
+            self.velocity[0] *= -self.restitution_coeff  # 使用恢复系数
             reward += self.rewards['bounce']
 
         # y方向边界碰撞
         if self.position[1] <= 0:
             self.position[1] = 0
-            self.velocity[1] *= -1
+            self.velocity[1] *= -self.restitution_coeff  # 使用恢复系数
             reward += self.rewards['bounce']
         elif self.position[1] >= self.height:
             self.position[1] = self.height
-            self.velocity[1] *= -1
+            self.velocity[1] *= -self.restitution_coeff  # 使用恢复系数
             reward += self.rewards['bounce']
 
         return reward
@@ -137,7 +140,7 @@ class RollingBall(gym.Env):
     def render(self):
         # 渲染模式判断
         if self.render_mode not in ["rgb_array", "human"]:
-            raise ValueError("Unsupported render mode")
+            raise ValueError("不支持的渲染模式")
         return self._render_frame()
 
     def _render_frame(self):
