@@ -31,7 +31,19 @@ class Q_Net(torch.nn.Module):
         self.fc1 = torch.nn.Linear(input_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = torch.nn.Linear(hidden_dim, output_dim)
-
+        # 初始化权重
+        self._init_weights()
+    
+    def _init_weights(self):
+        """使用Kaiming初始化权重，适合激活函数为Relu"""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                # 使用 Kaiming 均匀初始化，指定 nonlinearity='relu'
+                nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+                # 偏置置零
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+                    
     def forward(self, x):
         x = F.relu(self.fc1(x)) 
         x = F.relu(self.fc2(x))
