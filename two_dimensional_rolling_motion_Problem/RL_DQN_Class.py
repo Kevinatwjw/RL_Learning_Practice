@@ -29,11 +29,13 @@ class Q_Net(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
         self.fc1 = torch.nn.Linear(input_dim, hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, output_dim)
+        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = torch.nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x)) 
-        return self.fc2(x)
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
 
 
 class DQN(torch.nn.Module):
@@ -87,7 +89,6 @@ class DQN(torch.nn.Module):
         dqn_loss.backward() 
         self.optimizer.step()
         
-        if self.count % self.target_update == 0:
-            # 按一定间隔更新 target 网络参数
-            self.target_q_net.load_state_dict(self.q_net.state_dict())  
-        self.count += 1
+        # 软更新目标网络参数
+        for target_param, q_param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
+            target_param.data.copy_(self.tau * q_param.data + (1.0 - self.tau) * target_param.data)
