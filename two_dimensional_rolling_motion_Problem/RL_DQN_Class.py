@@ -61,7 +61,6 @@ class DQN(torch.nn.Module):
         self.gamma = gamma                      # 折扣因子
         self.epsilon = epsilon                  # epsilon-greedy
         self.tau = tau
-        self.count = 0                          # Q_Net 更新计数
         self.rng = np.random.RandomState(seed)  # agent 使用的随机数生成器
         self.device = device                
         
@@ -105,3 +104,31 @@ class DQN(torch.nn.Module):
         for target_param, q_param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             target_param.data.copy_(self.tau * q_param.data + (1.0 - self.tau) * target_param.data)
 
+
+class DoubleDQN(DQN):
+    ''' Double DQN算法 '''
+    def __init__(self, state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, device, tau=0.001, seed=None):
+        super().__init__(state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, device, tau, seed)
+    
+    def update(self, transition_dict):
+        states = torch.tensor(transition_dict['states'], dtype=torch.float).to(self.device)                             # (bsz, state_dim)
+        next_states = torch.tensor(transition_dict['next_states'], dtype=torch.float).to(self.device)                   # (bsz, state_dim)
+        actions = torch.tensor(transition_dict['actions'], dtype=torch.int64).view(-1, 1).to(self.device)               # (bsz, act_dim)
+        rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()     # (bsz, )
+        dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()         # (bsz, )
+        # Double DQN：主网络选择动作，目标网络估计Q值
+        q_values = self.q_net(states).gather(dim=1, index=actions).squeeze()                # (bsz, )
+        # 使用Q网络估计最优动作（[0]取最优值，[1]取最优值的索引）
+        max_actions_index = self.q_net(next_states).max(axis=1)[1]
+        # 由目标网络计算Q值
+        max_next_q_values = self.target_q_net(next_states).gather(dim=1, index = max_actions_index.unsqueeze(1)).squeeze()                   # (bsz, )
+        q_targets = rewards + self.gamma * max_next_q_values * (1 - dones)                  # (bsz, )
+
+        dqn_loss = torch.mean(F.mse_loss(q_values, q_targets))  
+        self.optimizer.zero_grad()                                                         
+        dqn_loss.backward() 
+        self.optimizer.step()
+        
+        # 软更新目标网络参数
+        for target_param, q_param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
+            target_param.data.copy_(self.tau * q_param.data + (1.0 - self.tau) * target_param.data)
