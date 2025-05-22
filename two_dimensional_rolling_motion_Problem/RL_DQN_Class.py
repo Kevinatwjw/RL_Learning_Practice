@@ -52,7 +52,7 @@ class Q_Net(torch.nn.Module):
 
 class DQN(torch.nn.Module):
     ''' DQN算法 '''
-    def __init__(self, state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, target_update, device, seed=None):
+    def __init__(self, state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, tau, device, seed=None):
         super().__init__()
         self.action_dim = action_dim
         self.state_dim = state_dim
@@ -60,7 +60,7 @@ class DQN(torch.nn.Module):
         self.action_range = action_range        # action 取值范围
         self.gamma = gamma                      # 折扣因子
         self.epsilon = epsilon                  # epsilon-greedy
-        self.target_update = target_update      # 目标网络更新频率
+        self.tau = tau
         self.count = 0                          # Q_Net 更新计数
         self.rng = np.random.RandomState(seed)  # agent 使用的随机数生成器
         self.device = device                
@@ -104,3 +104,4 @@ class DQN(torch.nn.Module):
         # 软更新目标网络参数
         for target_param, q_param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             target_param.data.copy_(self.tau * q_param.data + (1.0 - self.tau) * target_param.data)
+
