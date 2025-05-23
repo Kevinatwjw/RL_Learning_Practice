@@ -22,10 +22,10 @@ class RollingBall(gym.Env):
         self.time_step = 0.01
 
         # 奖励参数
-        self.rewards = {'step':-2.0, 'bounce':-10.0, 'goal':300.0}
+        self.rewards = {'step':-2.0, 'bounce':-5.0, 'goal':100.0}
         
         # 起止位置
-        self.target_position = np.array([self.width*0.8, self.height*0.8], dtype=np.float32)
+        self.target_position = np.array([self.width*0.7, self.height*0.7], dtype=np.float32)
         self.start_position = np.array([width*0.2, height*0.2], dtype=np.float64)
         self.position = self.start_position.copy()
 
@@ -63,14 +63,18 @@ class RollingBall(gym.Env):
         self.position += self.velocity * self.time_step
 
         # 计算奖励
-        distance = np.linalg.norm(self.position - self.target_position)
-        reward = self.rewards['step'] - 1.0 * distance  # 增强距离惩罚
+        # 计算奖励
+        distance = np.abs(np.linalg.norm(self.position - self.target_position))
+        reward = self.rewards['step'] - 1.0 * distance
         # 阶段性奖励
-        if 2.0 <= distance < 3.0:
-            reward += 20.0
-        elif 1.0 <= distance < 2.0:
-            reward += 50.0
-   
+        if 1.0 <= distance < 1.5:
+            reward += 1
+        elif 0.5 <= distance < 1.0:
+            reward += 1.5
+        elif distance < 0.5:
+            reward += 2
+        # 处理边界碰撞
+        reward = self._handle_boundary_collision(reward)
 
         # 检查是否到达目标状态
         terminated, truncated = False, False
