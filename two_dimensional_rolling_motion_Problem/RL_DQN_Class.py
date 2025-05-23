@@ -65,9 +65,9 @@ class DQN(torch.nn.Module):
         self.device = device                
         
         # Q 网络
-        self.q_net = Q_Net(state_dim, hidden_dim, action_range).to(device)  
+        self.q_net = Q_Net(state_dim, hidden_dim, action_range).to(self.device)  
         # 目标网络
-        self.target_q_net = Q_Net(state_dim, hidden_dim, action_range).to(device)
+        self.target_q_net = Q_Net(state_dim, hidden_dim, action_range).to(self.device)
         # 使用Adam优化器
         self.optimizer = torch.optim.Adam(self.q_net.parameters(), lr=lr)
         
@@ -132,3 +132,46 @@ class DoubleDQN(DQN):
         # 软更新目标网络参数
         for target_param, q_param in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             target_param.data.copy_(self.tau * q_param.data + (1.0 - self.tau) * target_param.data)
+            
+class VA_net(torch.nn.Module):
+    """_summary_
+
+    Args:
+        torch (_type_): _description_
+    """
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(VA_net, self).__init__()
+        # 共享网络部分
+        self.fc1 = torch.nn.Linear(input_dim, hidden_dim)
+        self.fc2= torch.nn.Linear(hidden_dim, hidden_dim)
+        # 输出每个动作的优势值A(s,a)，维度为动作空间的大小
+        self.fc_A = torch.nn.Linear(hidden_dim, output_dim)
+        # 输出状态价值V(s),维度为1
+        self.fc_V = torch.nn.Linear(hidden_dim, 1)
+        self._init_weights()
+    
+    def _init_weights(self):
+        """使用Kaiming初始化权重，适合激活函数为Relu"""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                # 使用 Kaiming 均匀初始化，指定 nonlinearity='relu'
+                nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+                # 偏置置零
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+        
+    def forward(self, x):
+        x = F.relu(self.fc1(x)) 
+        x = F.relu(self.fc2(x))
+        A = self.fc_A(x)
+        V = self.fc_V(x)
+        Q = V + (A - A.mean().item())
+        return Q
+    
+class DuelingDON(DQN):
+    def __init__(self, state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, device, tau=0.001, seed=None):
+        super().__init__(state_dim, hidden_dim, action_dim, action_range, lr, gamma, epsilon, device, tau, seed)
+        
+        self.q_net = VA_net(state_dim, hidden_dim, action_range).to(self.device)
+        self.target_q_net = VA_net(state_dim, hidden_dim, action_range).to(self.device)
+        self.optimizer = torch.optim.Adam(self.q_net.parameters(), lr = lr)
