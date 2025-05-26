@@ -290,7 +290,7 @@ class REINFORCE(torch.nn.Module):
         super().__init__()  # 调用父类 torch.nn.Module 的构造函数，初始化模块
         # 初始化策略网络 PolicyNet，用于参数化策略 π_θ(a|s)
         # state_dim -> hidden_dim -> action_range
-        self.policynet = PolicyNet(state_dim, hidden_dim, action_range).to(device)
+        self.policynet = PolicyNet(state_dim, hidden_dim, action_range).to(self.device)
         # 使用 Adam 优化器优化策略网络参数
         # lr=learning_rate 指定学习率 α，用于梯度上升更新参数
         self.optimizer = torch.optim.Adam(self.policynet.parameters(), lr=learning_rate)
@@ -400,6 +400,47 @@ class REINFORCE(torch.nn.Module):
         # 由于 loss 中有负号，实际执行的是梯度上升：θ = θ + α * ∇_θ J(θ)
         self.optimizer.step()
         
+class ActorCritic(torch.nn.Module):
+    def __init__(self, state_dim, hidden_dim, action_range, actor_lr, critic_lr, gamma, device):
+        super().__init__()
+        self.gamma = gamma
+        self.device = device
         
+        self.actor = PolicyNet(state_dim, hidden_dim, action_range).to(self.device)
+        self.critic = Q_Net(state_dim, hidden_dim, action_range).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+    
+    def take_action(self, state):
+        state = torch.tensor(state, dtype=torch.float).to(self.device)
+        state = state.unsqueeze(0)
+        probs = self.actor(state)
+        action_dist = torch.distributions.Categorical(probs)
+        action = action_dist.sample()
+        return action.item()
+    
+    def update_actor_critic(self, transition_dict):
+        states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
+        next_states = torch.tensor(np.array(transition_dict['next_states']), dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(self.device)
+        next_actions = torch.tensor(transition_dict['next_actions']).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()
+        dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()
         
-        
+        # Critic Loss
+        q_values = self.critic(states).gather(dim=1, index=actions).squeeze()
+        next_q_values = self.critic(next_states).gather(dim=1, index=next_actions).squeeze()
+        td_targets = rewards + self.gamma * next_q_values * (1-dones)
+        # td_targets 中包含 actor 给出的 next_action，将其 detach 以确保只更新 critic 参数
+        critic_loss = torch.mean(F.mse_loss(q_values, td_targets.detach()))
+        # Actor Loss
+        log_probs = torch.log(self.actor(states).gather(dim=1, index=actions))
+        actor_loss = torch.mean(-log_probs * q_values.detach())
+
+        # 更新参数
+        self.actor_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
+        actor_loss.backward()
+        critic_loss.backward()
+        self.actor_optimizer.step()
+        self.critic_optimizer.step()        

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import os
 from gym.utils.env_checker import check_env
-from RL_DQN_Class import ReplayBuffer, REINFORCE
+from RL_DQN_Class import ReplayBuffer, ActorCritic
 from gym.wrappers import TimeLimit
 from two_dimensional_rolling_motion import RollingBall, DiscreteActionWrapper, FlattenActionSpaceWrapper
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         # 拼接首部、中间和尾部，得到平滑序列
         return np.concatenate((begin, middle, end))
 
-    def set_seed(env, seed=42):
+    def set_seed(env, seed=50):
         """
         设置随机种子，确保实验可重复。
 
@@ -66,9 +66,10 @@ if __name__ == "__main__":
     action_dim = 1  # 环境动作维度（未离散化前），RollingBall 动作是一个二维向量 [ax, ay]
     action_bins = 10  # 动作离散化的 bins 数量，每个维度离散化为 10 个值
     action_range = action_bins * action_bins  # 离散化后的动作空间大小，例如 10*10=100
-    learning_rate = 1e-3  # 学习率，用于 Adam 优化器，控制参数更新步长
+    actor_lr = 1e-2  # 学习率，用于 Adam 优化器，控制参数更新步长
+    critic_lr = 1e-2  # 学习率，用于 Adam 优化器，控制参数更新步长
     epsilon_start = 0.2  # 初始探索率（未使用，但可能是早期设计遗留）
-    epsilon_end = 0.01  # 最终探索率（未使用，但可能是早期设计遗留）
+    epsilon_end = 0.05  # 最终探索率（未使用，但可能是早期设计遗留）
     num_episodes = 1000  # 总训练回合数
     hidden_dim = 32  # 策略网络隐藏层维度，控制网络容量
     gamma = 0.98  # 折扣因子，用于计算折扣回报 G_t
@@ -86,7 +87,7 @@ if __name__ == "__main__":
     # 检查环境是否符合 gym 规范，例如动作和状态空间定义是否正确
     check_env(env.unwrapped)
     # 设置随机种子，确保实验可重复
-    set_seed(env, 42)
+    set_seed(env, 50)
 
     # 构建 REINFORCE 代理
     # state_dim=4：输入状态维度
@@ -95,7 +96,7 @@ if __name__ == "__main__":
     # learning_rate=1e-4：学习率
     # gamma=0.98：折扣因子
     # device：计算设备
-    agent = REINFORCE(state_dim, hidden_dim, action_range, learning_rate, gamma, device)
+    agent = ActorCritic(state_dim, hidden_dim, action_range, actor_lr, critic_lr, gamma, device)
 
     # 开始训练
     return_list = []  # 存储每个回合的总回报，用于后续绘图
@@ -114,6 +115,7 @@ if __name__ == "__main__":
                     'states': [],
                     'actions': [],
                     'next_states': [],
+                    'next_actions':[],
                     'rewards': [],
                     'dones': []
                 }
@@ -132,10 +134,12 @@ if __name__ == "__main__":
                     # terminated：是否到达目标（True 表示成功）
                     # truncated：是否超过最大步数（True 表示超时）
                     next_state, reward, terminated, truncated, _ = env.step(action)
+                    next_action = agent.take_action(next_state)
                     # 存储轨迹数据
                     transition_dict['states'].append(state)
                     transition_dict['actions'].append(action)
                     transition_dict['next_states'].append(next_state)
+                    transition_dict['next_actions'].append(next_action)
                     transition_dict['rewards'].append(reward)
                     transition_dict['dones'].append(terminated or truncated)
                     # 更新状态为下一状态
@@ -145,17 +149,17 @@ if __name__ == "__main__":
 
                     # 如果回合结束（成功或超时），渲染环境并退出循环
                     if terminated or truncated:
-                        #env.render()  # 渲染环境，显示轨迹（show_epi=True）
+                        env.render()  # 渲染环境，显示轨迹（show_epi=True）
                         # 如果成功到达目标，打印信息
                         if terminated:
                             print(f"Episode {num_episodes / 20 * i + i_episode + 1}: Goal reached!")
                         break
-                    env.render()  # 注释掉的每步渲染，避免训练时过于频繁的显示
+                    # env.render()  # 注释掉的每步渲染，避免训练时过于频繁的显示
                     
                 # 使用当前策略收集的轨迹数据进行 on-policy 更新
                 # REINFORCE 是一种 on-policy 算法，更新时使用当前策略生成的数据
                 # transition_dict 包含一条完整轨迹，agent.update 计算梯度并更新参数
-                agent.update(transition_dict)
+                agent.update_actor_critic(transition_dict)
                 # 记录当前回合的总回报
                 return_list.append(episode_return)
                 # 更新进度条，显示当前回合信息
