@@ -177,7 +177,7 @@ if __name__ == "__main__":
     
     # 创建结果目录，用于保存训练结果图
     # exist_ok=True：如果目录已存在，不会报错
-    os.makedirs('./result', exist_ok=True)
+    os.makedirs('./two_dimensional_rolling_motion_Problem/result', exist_ok=True)
     
     # 显示策略性能
     # 使用滑动平均平滑回报曲线，窗口大小为 29
@@ -202,6 +202,6 @@ if __name__ == "__main__":
     # 显示图例
     plt.legend()
     # 保存图像到 result 目录
-    plt.savefig(f'./result/{agent._get_name()}({reward_type}).png')
+    plt.savefig(f'./two_dimensional_rolling_motion_Problem/result/{agent._get_name()}({reward_type}).png')
     # 显示图像
     plt.show()

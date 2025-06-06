@@ -204,7 +204,7 @@ if __name__ == "__main__":
     plt.ylabel('Returns')
     plt.title(f'{agent._get_name()} on RollingBall')
     plt.legend()
-    plt.savefig(f'./result/{agent._get_name()}.png')
+    plt.savefig(f'./two_dimensional_rolling_motion_Problem/result/{agent._get_name()}.png')
     plt.show()
 
     # 显示最大 Q 值
@@ -215,5 +215,5 @@ if __name__ == "__main__":
     plt.xlabel('Frames')
     plt.ylabel('Max Q_value')
     plt.title(f'{agent._get_name()} on RollingBall')
-    plt.savefig(f'./result/{agent._get_name()}_MaxQ.png')
+    plt.savefig(f'./two_dimensional_rolling_motion_Problem/result/{agent._get_name()}_MaxQ.png')
     plt.show()

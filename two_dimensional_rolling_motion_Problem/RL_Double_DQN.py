@@ -193,7 +193,7 @@ if __name__ == "__main__":
     env.close()
     
     # 创建结果目录
-    os.makedirs('./result', exist_ok=True)  # 确保 ./result 目录存在
+    os.makedirs('./two_dimensional_rolling_motion_Problem/result', exist_ok=True)  # 确保 ./result 目录存在
     
     # 显示训练结果
     mv_return_list = moving_average(return_list, 29)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     # 设置标题，包含代理名称（如 DQN）
     plt.legend()
     # 显示图例
-    plt.savefig(f'./result/{agent._get_name()}.png')
+    plt.savefig(f'./two_dimensional_rolling_motion_Problem/result/{agent._get_name()}.png')
     # 保存回报曲线
     plt.show()
     # 显示图像
