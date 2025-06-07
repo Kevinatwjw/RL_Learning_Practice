@@ -108,5 +108,136 @@ class REINFORCE_Baseline(torch.nn.Module):
         # 一步更新总的策略网络参数
         self.optimizer_policy.step()
             
+class A2C(torch.nn.Module):
+    def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, gamma, device):
+        super().__init__()
+        self.gamma = gamma
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
+        self.device = device
+        
+        # 定义策略网络
+        self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(self.device)
+        self.critic = ValueNet(state_dim, hidden_dim).to(self.device)
+        # 定义优化器
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.critic_lr)
+        
+    def take_action(self, state):
+        state = torch.tensor(state, dtype=torch.float).to(self.device)
+        # 扩展state的维度，变成（1,state_dim）
+        state = state.unsqueeze(0)
+        probs = self.actor(state).squeeze()
+        action_dist = torch.distributions.Categorical(probs)
+        action = action_dist.sample()
+        return action.item()
+    
+    def update(self, transition_dict):
+        # 从transtions中提取states,actions,rewards,next_states,dones
+        states = torch.tensor(transition_dict['states'], dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions'], dtype=torch.long).view(-1,1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1,1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'], dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1,1).to(self.device)
+        
+        # 计算网络的损失
+        # Critic网络的损失,用 mse loss 去优化 Sarsa TD error
+        # 公式：td_target = r_t + gamma * V(s_t+1)
+        td_target = rewards + self.gamma*self.critic(next_states)*(1-dones)
+        critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
+        
+        # Actor网络的损失，使用log_prob去优化TD error
+        # 公式：log_prob(a_t|s_t) * (G_t - V(s_t))
+        td_error = td_target - self.critic(states)
+        # 使用gather()将actions转换成one-hot编码，并计算log_prob
+        # one-hot编码：[0,1,0,0]
+        # probs的形状是（batch_size, action_dim），actions的形状是（batch_size,1）
+        probs = self.actor(states).gather(1, actions)
+        log_probs = torch.log(probs)
+        # 最小化
+        actor_loss = torch.mean(-log_probs * td_error.detach())
+        
+        # 梯度清零
+        self.actor_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
+        
+        # 反向传播
+        actor_loss.backward()
+        critic_loss.backward()
+        
+        # 更新网络
+        self.actor_optimizer.step()
+        self.critic_optimizer.step()
         
         
+class A2C_target(torch.nn.Module):
+    def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, gamma,target_weight, device):
+        super().__init__()
+        self.gamma = gamma
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
+        self.target_weight = target_weight
+        self.device = device
+        
+        # 定义策略网络
+        self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(self.device)
+        self.critic = ValueNet(state_dim, hidden_dim).to(self.device)
+        self.critic_target = ValueNet(state_dim, hidden_dim).to(self.device)
+        # 定义优化器
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.critic_lr)
+        
+    def take_action(self, state):
+        state = torch.tensor(state, dtype=torch.float).to(self.device)
+        # 扩展state的维度，变成（1,state_dim）
+        state = state.unsqueeze(0)
+        probs = self.actor(state).squeeze()
+        action_dist = torch.distributions.Categorical(probs)
+        action = action_dist.sample()
+        return action.item()
+    
+    def update(self, transition_dict):
+        # 从transtions中提取states,actions,rewards,next_states,dones
+        states = torch.tensor(transition_dict['states'], dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions'], dtype=torch.long).view(-1,1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1,1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'], dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1,1).to(self.device)
+        
+        # 计算网络的损失
+        # Critic网络的损失,用 mse loss 去优化 Sarsa TD error
+        # 公式：td_target = r_t + gamma * V(s_t+1)
+        td_target = rewards + self.gamma*self.critic_target(next_states)*(1-dones)
+        critic_loss = torch.mean(F.mse_loss(self.critic(states), td_target.detach()))
+        
+        # Actor网络的损失，使用log_prob去优化TD error
+        # 公式：log_prob(a_t|s_t) * (G_t - V(s_t))
+        td_error = td_target - self.critic(states)
+        # 使用gather()将actions转换成one-hot编码，并计算log_prob
+        # one-hot编码：[0,1,0,0]
+        # probs的形状是（batch_size, action_dim），actions的形状是（batch_size,1）
+        probs = self.actor(states).gather(1, actions)
+        log_probs = torch.log(probs)
+        # 最小化
+        actor_loss = torch.mean(-log_probs * td_error.detach())
+        
+        # 梯度清零
+        self.actor_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
+        
+        # 反向传播
+        actor_loss.backward()
+        critic_loss.backward()
+        
+        # 更新网络
+        self.actor_optimizer.step()
+        self.critic_optimizer.step()
+        
+        # 更新目标网络
+        params_target = list(self.critic_target.parameters())
+        params_critic = list(self.critic.parameters())
+        for i in range(len(params_target)):
+            new_params_target = self.target_weight * params_target[i] + (1-self.target_weight) * params_critic[i]
+            params_target[i].data.copy_(new_params_target)
+            
+            
