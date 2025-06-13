@@ -19,7 +19,7 @@ if __name__ == "__main__":
         end = (np.cumsum(a[:-window_size:-1])[::2] / r)[::-1]
         return np.concatenate((begin, middle, end))
 
-    def set_seed(env, seed=42):
+    def set_seed(env, seed=50):
         ''' 设置随机种子 '''
         env.action_space.seed(seed)
         env.reset(seed=seed)
@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     state_dim = 4               # 环境观测维度
     action_range = 2            # 环境动作空间大小
-    actor_lr = 1e-3 
+    actor_lr = 1e-3
     critic_lr = 1e-2
     target_weight = 0.95
     num_episodes = 1000
@@ -48,9 +48,9 @@ if __name__ == "__main__":
 
     # start training
     return_list = []
-    for i in range(10):
-        with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
-            for i_episode in range(int(num_episodes / 10)):
+    for i in range(20):
+        with tqdm(total=int(num_episodes / 20), desc='Iteration %d' % i) as pbar:
+            for i_episode in range(int(num_episodes / 20)):
                 episode_return = 0
                 transition_dict = {
                     'states': [],
