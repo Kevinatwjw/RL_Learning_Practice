@@ -149,7 +149,7 @@ if __name__ == "__main__":
                     assert replay_buffer.size() > minimal_size
                     # 确保缓冲区足够大
                     b_s, b_a, b_r, b_ns, b_d = replay_buffer.sample(batch_size)
-                    # 采样 128 条经验
+                    # 采样 128 条经验，组织批量数据
                     transition_dict = {
                         'states': b_s,
                         'actions': b_a,
@@ -157,14 +157,13 @@ if __name__ == "__main__":
                         'rewards': b_r,
                         'dones': b_d
                     }
-                    # 组织批量数据
-                    agent.update(transition_dict)
                     # 更新 Q 网络，计算 Q 学习损失并优化
-
-                    state = next_state
+                    agent.update(transition_dict)
                     # 更新状态
-                    episode_return += reward
+                    state = next_state
                     # 累加回报
+                    episode_return += reward
+                    
 
                     if terminated or truncated:
                         env.render()

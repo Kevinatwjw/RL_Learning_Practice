@@ -90,7 +90,9 @@ class DQN(torch.nn.Module):
         actions = torch.tensor(transition_dict['actions'], dtype=torch.int64).view(-1, 1).to(self.device)               # (bsz, act_dim)
         rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()     # (bsz, )
         dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()         # (bsz, )
-
+        # 普通的DQN主网络一次性输出了状态下所有动作的Q值，这里计算动作和状态的价值用的都是主网络
+        # 通过 gather 函数获取对应动作的 Q 值
+        # 目标网络计算下一个状态的最大的Q值，max(axis=1) 返回最大值和索引
         q_values = self.q_net(states).gather(dim=1, index=actions).squeeze()                # (bsz, )
         max_next_q_values = self.target_q_net(next_states).max(axis=1)[0]                   # (bsz, )
         q_targets = rewards + self.gamma * max_next_q_values * (1 - dones)                  # (bsz, )
@@ -118,10 +120,11 @@ class DoubleDQN(DQN):
         dones = torch.tensor(transition_dict['dones'], dtype=torch.float).view(-1, 1).to(self.device).squeeze()         # (bsz, )
         # Double DQN：主网络选择动作，目标网络估计Q值
         q_values = self.q_net(states).gather(dim=1, index=actions).squeeze()                # (bsz, )
+        # 与普通DQN不同，这里使用主网络计算下一个状态的动作索引
         # 使用Q网络估计最优动作（[0]取最优值，[1]取最优值的索引）
         max_actions_index = self.q_net(next_states).max(axis=1)[1]
-        # 由目标网络计算Q值
-        max_next_q_values = self.target_q_net(next_states).gather(dim=1, index = max_actions_index.unsqueeze(1)).squeeze()                   # (bsz, )
+        # 由目标网络计算Q值,.gather(dim=1, index=max_actions_index.unsqueeze(1)) 获取对应动作的Q值
+        max_next_q_values = self.target_q_net(next_states).gather(dim=1, index=max_actions_index.unsqueeze(1)).squeeze()                   # (bsz, )
         q_targets = rewards + self.gamma * max_next_q_values * (1 - dones)                  # (bsz, )
 
         dqn_loss = torch.mean(F.mse_loss(q_values, q_targets))  
@@ -165,6 +168,7 @@ class VA_net(torch.nn.Module):
         x = F.relu(self.fc2(x))
         A = self.fc_A(x)
         V = self.fc_V(x)
+        # 原理：Q值是状态价值V(s)加上优势值A(s,a)与优势值均值的偏差，状态价值可以理解为是动作价值的期望
         Q = V + (A - A.mean().item())
         return Q
     
