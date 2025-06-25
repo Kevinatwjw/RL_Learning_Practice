@@ -38,8 +38,8 @@ if __name__ == "__main__":
     state_dim = env.observation_space.shape[0]  # 3
     action_dim = env.action_space.shape[0]     # 1
     action_bound = env.action_space.high[0]    # 2.0
-    actor_lr = 3e-2
-    critic_lr = 3e-2
+    actor_lr = 3e-4
+    critic_lr = 3e-3 # 通常critic学习率比actor大，因为critic需要更精确地估计Q值
     num_episodes = 200
     hidden_dim = 128
     gamma = 0.98
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # 初始化
     replay_buffer = ReplayBuffer(buffer_size)
-    agent = DDPG(state_dim, hidden_dim, action_dim, action_bound, sigma, actor_lr, critic_lr, tau, gamma, device)
+    agent = DDPG(state_dim, hidden_dim, action_dim, action_bound, gamma, tau, sigma, actor_lr, critic_lr, device)
 
     # 预填充回放缓冲区,原理是先随机探索，直到回放缓冲区达到最小容量
     state, _ = env.reset()
@@ -93,12 +93,11 @@ if __name__ == "__main__":
                     agent.update(transition_dict)
                     state = next_state
                     episode_return += reward
-                    # 衰减噪声
-                    agent.sigma = max(0.01, agent.sigma * 0.995)  # 指数衰减至 0.01
                     if terminated or truncated:
                         if terminated:
                             print(f"Episode {num_episodes / 10 * i + i_episode + 1}: Goal reached!")
                         break
+                    agent.sigma = max(0.01, agent.sigma * 0.995)  # 指数衰减至 0.01
 
  
 

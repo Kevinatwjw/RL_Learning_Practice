@@ -109,8 +109,8 @@ class DDPG(torch.nn.Module):
        
         # 计算目标Q值，critic网络
         next_q_values = self.target_critic(next_states, self.target_actor(next_states))
-        q_targets = rewards + self.gamma * next_q_values * (1-dones)
-        # q_targets没使用detach()，因为q_targets是目标值，需要计算梯度
+        # .detach() 来切断梯度流，目标Q值被视为一个固定的数值目标
+        q_targets = rewards + self.gamma * next_q_values.detach() * (1 - dones)
         critic_loss = torch.mean(F.mse_loss(self.critic(states, actions), q_targets))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
